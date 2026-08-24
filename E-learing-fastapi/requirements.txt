@@ -1,0 +1,30 @@
+# fastapi 
+# uvicorn 
+# sqlalchemy 
+# asyncpg 
+# psycopg2-binary 
+# python-dotenv 
+# passlib[bcrypt]
+
+# pydantic[email]
+
+# python-multipart
+# jinja2
+
+fastapi[standard]
+uvicorn
+
+# Database
+sqlalchemy
+asyncpg
+alembic
+
+# Validation
+pydantic
+email-validator
+
+# JWT Authentication
+python-jose[cryptography]
+
+# Environment variables
+python-dotenv
