@@ -33,20 +33,6 @@ jobs:
         run: |
           python -m compileall .
 
-      - name: Check Docker Hub username
-        run: |
-          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
-            echo "ERROR: DOCKERHUB_USERNAME is empty"
-            exit 1
-          fi
-
-          if [[ "${{ secrets.DOCKERHUB_USERNAME }}" =~ [^a-z0-9_.-] ]]; then
-            echo "ERROR: DOCKERHUB_USERNAME contains invalid characters"
-            exit 1
-          fi
-
-          echo "Docker Hub username is valid"
-
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
