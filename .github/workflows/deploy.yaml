@@ -42,4 +42,4 @@ jobs:
         run: docker build -t jenishselvaraj/crud-app:v1.0.3 .
 
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/elearning-fastapi:latest
+        run: docker push jenishselvaraj/crud-app:v1.0.3
