@@ -51,7 +51,7 @@ jobs:
           docker push jenishselvaraj/crud-app:v1.0.3
 
       # -----------------------------
-      # AWS
+      # AWS EKS
       # -----------------------------
 
       - name: Configure AWS credentials
@@ -61,21 +61,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # -----------------------------
-      # EKS
-      # -----------------------------
-
-      - name: Configure kubectl for EKS
+      - name: Configure kubectl
         run: |
           aws eks update-kubeconfig \
             --region ${{ secrets.AWS_REGION }} \
             --name ${{ secrets.EKS_CLUSTER_NAME }}
 
-      - name: Update Kubernetes deployment
+      - name: Check EKS connection
+        run: |
+          kubectl get nodes
+
+      # Pull/deploy the Docker image through Kubernetes
+      - name: Deploy Docker image to EKS
         run: |
           kubectl set image deployment/crud-app \
-            crud-app=jenishselvaraj/crud-app:v1.0.3
+            crud-app=jenishselvaraj/crud-app:v1.0.3 \
+            -n elearning
 
       - name: Wait for deployment rollout
         run: |
-          kubectl rollout status deployment/crud-app
+          kubectl rollout status deployment/crud-app \
+            -n elearning
+
+      - name: Check pods
+        run: |
+          kubectl get pods -n elearning
