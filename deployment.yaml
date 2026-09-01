@@ -3,6 +3,7 @@ kind: Deployment
 
 metadata:
   name: crud-app
+  namespace: elearning
 
 spec:
   replicas: 2
