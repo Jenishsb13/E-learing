@@ -3,6 +3,7 @@ kind: Service
 
 metadata:
   name: crud-app-service
+  namespace: elearning
 
 spec:
   type: LoadBalancer
