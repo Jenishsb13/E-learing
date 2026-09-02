@@ -7,6 +7,7 @@ on:
 
 jobs:
   build-and-deploy:
+
     runs-on: ubuntu-latest
 
     defaults:
@@ -15,17 +16,17 @@ jobs:
 
     steps:
 
-      # -----------------------------
+      # --------------------------------
       # Checkout
-      # -----------------------------
+      # --------------------------------
 
       - name: Checkout code
         uses: actions/checkout@v4
 
 
-      # -----------------------------
-      # Setup Python
-      # -----------------------------
+      # --------------------------------
+      # Python
+      # --------------------------------
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -33,9 +34,9 @@ jobs:
           python-version: "3.12"
 
 
-      # -----------------------------
+      # --------------------------------
       # Install dependencies
-      # -----------------------------
+      # --------------------------------
 
       - name: Install dependencies
         run: |
@@ -43,18 +44,18 @@ jobs:
           pip install -r requirements.txt
 
 
-      # -----------------------------
-      # Validate Python code
-      # -----------------------------
+      # --------------------------------
+      # Validate Python
+      # --------------------------------
 
       - name: Validate Python code
         run: |
           python -m compileall .
 
 
-      # -----------------------------
+      # --------------------------------
       # Docker Hub Login
-      # -----------------------------
+      # --------------------------------
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -63,27 +64,29 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
 
-      # -----------------------------
+      # --------------------------------
       # Build Docker Image
-      # -----------------------------
+      # --------------------------------
 
       - name: Build Docker image
         run: |
-          docker build -t jenishselvaraj/crud-app:v1.0.3 .
+          docker build \
+            -t jenishselvaraj/crud-app:${{ github.sha }} .
 
 
-      # -----------------------------
+      # --------------------------------
       # Push Docker Image
-      # -----------------------------
+      # --------------------------------
 
       - name: Push Docker image
         run: |
-          docker push jenishselvaraj/crud-app:v1.0.3
+          docker push \
+            jenishselvaraj/crud-app:${{ github.sha }}
 
 
-      # -----------------------------
-      # Configure AWS
-      # -----------------------------
+      # --------------------------------
+      # AWS Credentials
+      # --------------------------------
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -93,9 +96,9 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
 
-      # -----------------------------
-      # Configure kubectl for EKS
-      # -----------------------------
+      # --------------------------------
+      # Configure kubectl
+      # --------------------------------
 
       - name: Configure kubectl
         run: |
@@ -104,59 +107,107 @@ jobs:
             --name ${{ secrets.EKS_CLUSTER_NAME }}
 
 
-      # -----------------------------
-      # Check EKS connection
-      # -----------------------------
+      # --------------------------------
+      # Check EKS
+      # --------------------------------
 
       - name: Check EKS connection
         run: |
           kubectl get nodes
 
 
-      # -----------------------------
-      # Deploy Kubernetes manifests
-      # -----------------------------
+      # --------------------------------
+      # Deploy PostgreSQL Secret
+      # --------------------------------
 
-      - name: Deploy to EKS
+      - name: Deploy PostgreSQL Secret
+        run: |
+          kubectl apply -f ../postgres-secret.yaml
+
+
+      # --------------------------------
+      # Deploy PostgreSQL
+      # --------------------------------
+
+      - name: Deploy PostgreSQL
+        run: |
+          kubectl apply -f ../postgres-deployment.yaml
+          kubectl apply -f ../postgres-service.yaml
+
+
+      # --------------------------------
+      # Deploy FastAPI
+      # --------------------------------
+
+      - name: Deploy FastAPI
         run: |
           kubectl apply -f ../deployment.yaml
           kubectl apply -f ../service.yaml
 
 
-      # -----------------------------
-      # Update Docker image
-      # -----------------------------
+      # --------------------------------
+      # Update FastAPI Image
+      # --------------------------------
 
       - name: Update Docker image
         run: |
           kubectl set image deployment/crud-app \
-            crud-app=jenishselvaraj/crud-app:v1.0.3 \
+            crud-app=jenishselvaraj/crud-app:${{ github.sha }} \
             -n elearning
 
 
-      # -----------------------------
-      # Wait for deployment
-      # -----------------------------
+      # --------------------------------
+      # Wait for Rollout
+      # --------------------------------
 
-      - name: Wait for deployment rollout
+      - name: Wait for deployment
         run: |
           kubectl rollout status deployment/crud-app \
-            -n elearning
+            -n elearning \
+            --timeout=180s
 
 
-      # -----------------------------
-      # Check deployment
-      # -----------------------------
+      # --------------------------------
+      # Check Pods
+      # --------------------------------
 
       - name: Check pods
         run: |
-          kubectl get pods -n elearning
+          kubectl get pods -n elearning -o wide
 
 
-      # -----------------------------
-      # Check service
-      # -----------------------------
+      # --------------------------------
+      # Check Services
+      # --------------------------------
 
-      - name: Check service
+      - name: Check services
         run: |
           kubectl get svc -n elearning
+
+
+      # --------------------------------
+      # Debug if deployment fails
+      # --------------------------------
+
+      - name: Debug deployment
+        if: failure()
+        run: |
+          echo "===== PODS ====="
+          kubectl get pods -n elearning -o wide
+
+          echo "===== DEPLOYMENT ====="
+          kubectl describe deployment crud-app -n elearning
+
+          echo "===== POD DESCRIBE ====="
+          kubectl describe pods -n elearning
+
+          echo "===== EVENTS ====="
+          kubectl get events \
+            -n elearning \
+            --sort-by=.lastTimestamp
+
+          echo "===== APPLICATION LOGS ====="
+          kubectl logs \
+            -n elearning \
+            -l app=crud-app \
+            --tail=100
