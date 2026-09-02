@@ -1,12 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
-
 metadata:
   name: crud-app
   namespace: elearning
 
 spec:
   replicas: 2
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
 
   selector:
     matchLabels:
@@ -20,7 +25,36 @@ spec:
     spec:
       containers:
         - name: crud-app
-          image: jenishselvaraj/crud-app:v1.0.3
+
+          image: jenishselvaraj/crud-app:latest
+
+          imagePullPolicy: Always
 
           ports:
-            - containerPort: 8000
+            - name: http
+              containerPort: 8000
+
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+
+            - name: DB_HOST
+              value: postgres-service
+
+            - name: DB_PORT
+              value: "5432"
